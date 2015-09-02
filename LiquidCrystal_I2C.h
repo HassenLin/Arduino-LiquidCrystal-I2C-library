@@ -69,7 +69,7 @@ public:
 	 * @param charsize	The size in dots that the display has, use LCD_5x10DOTS or LCD_5x8DOTS.
 	 */
 	LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t lcd_rows, uint8_t charsize = LCD_5x8DOTS);
-
+	~LiquidCrystal_I2C();
 	/**
 	 * Set the LCD display in the correct begin state, must be called before anything else is done.
 	 */
@@ -147,6 +147,8 @@ public:
 	void printstr(const char[]);
 	 
 private:
+	uint8_t *led_buffer;
+	uint8_t x,y;
 	void send(uint8_t, uint8_t);
 	void write4bits(uint8_t);
 	void expanderWrite(uint8_t);

@@ -29,6 +29,15 @@ LiquidCrystal_I2C::LiquidCrystal_I2C(uint8_t lcd_addr, uint8_t lcd_cols, uint8_t
 	_rows = lcd_rows;
 	_charsize = charsize;
 	_backlightval = LCD_BACKLIGHT;
+	led_buffer = (uint8_t*)malloc(lcd_rows*lcd_cols);
+	memset(led_buffer,0,lcd_rows*lcd_cols);
+	x=0;
+	y=0;
+}
+
+LiquidCrystal_I2C::~LiquidCrystal_I2C()
+{
+	free(led_buffer);
 }
 
 void LiquidCrystal_I2C::begin() {
@@ -95,11 +104,15 @@ void LiquidCrystal_I2C::begin() {
 void LiquidCrystal_I2C::clear(){
 	command(LCD_CLEARDISPLAY);// clear display, set cursor position to zero
 	delayMicroseconds(2000);  // this command takes a long time!
+	x=0;
+	y=0;	
 }
 
 void LiquidCrystal_I2C::home(){
 	command(LCD_RETURNHOME);  // set cursor position to zero
 	delayMicroseconds(2000);  // this command takes a long time!
+	x=0;
+	y=0;
 }
 
 void LiquidCrystal_I2C::setCursor(uint8_t col, uint8_t row){
@@ -107,6 +120,8 @@ void LiquidCrystal_I2C::setCursor(uint8_t col, uint8_t row){
 	if (row > _rows) {
 		row = _rows-1;    // we count rows starting w/0
 	}
+	x=col;
+	y=row;
 	command(LCD_SETDDRAMADDR | (col + row_offsets[row]));
 }
 
@@ -178,7 +193,8 @@ void LiquidCrystal_I2C::createChar(uint8_t location, uint8_t charmap[]) {
 	location &= 0x7; // we only have 8 locations 0-7
 	command(LCD_SETCGRAMADDR | (location << 3));
 	for (int i=0; i<8; i++) {
-		write(charmap[i]);
+		//write(charmap[i]);
+		send(charmap[i], Rs);
 	}
 }
 
@@ -200,7 +216,38 @@ inline void LiquidCrystal_I2C::command(uint8_t value) {
 }
 
 inline size_t LiquidCrystal_I2C::write(uint8_t value) {
-	send(value, Rs);
+	if(y>_rows-1)	
+	{
+		uint8_t _x=x;
+		uint8_t *pDst=led_buffer;
+		uint8_t *pSrc=pDst+(int)_cols;
+		memcpy(pDst,pSrc,(int)_cols*((int)_rows-1));
+		for(int i=0;i<_rows;i++)
+		{
+			setCursor(0,i);
+			for(int j=0;j<_cols;j++)
+			{
+		 		send(*pDst==0?' ':*pDst, Rs);
+				pDst++;
+			}
+		}
+		setCursor(_x,_rows-1);
+	}
+	if(value=='\r')
+	{
+		setCursor(0,y);
+	}
+	else if(value=='\n')
+	{	
+			setCursor(x,y+1);
+	}
+	else	
+	{
+		send(value, Rs);	
+		if(x<_cols)
+				led_buffer[(int)y*(int)_cols+(int)x]=value;
+		x++;
+	}
 }
 
 
